@@ -98,6 +98,7 @@ void solve() {
 }
 
 void questionnaire() {
+  int kaisuu = 0;
   int answer, guess;
   Hint hint;
   guess = -1;
@@ -106,8 +107,15 @@ void questionnaire() {
     scanf("%d", &guess);
     hint = get_hint(guess, answer);
     printf("%d Hit, %dBlow\n", hint.hit, hint.blow);
+    kaisuu++;
   }
   printf("answer: %d\n", answer);
+  printf("kaisuu: %d\n", kaisuu);
+  if (kaisuu < 7) {
+    printf("tuyoi\n");
+  } else {
+    printf("yowai\n");
+  }
 }
 
 int main(int argc, char *argv[]) {
