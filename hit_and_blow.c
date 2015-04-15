@@ -3,9 +3,25 @@
 #include<time.h>
 #include<stdbool.h>
 
+bool ISLEGAL[10000];
+int LEGALNUMS[5040];
+
 typedef struct hint {
   int hit, blow;
 } Hint;
+
+typedef struct candidates {
+  bool cand[10000];
+} Candidates;
+
+Candidates new_candidates() {
+  Candidates c;
+  int i;
+  for (i = 0; i < 10000; i++) {
+    c.cand[i] = true;
+  }
+  return c;
+}
 
 int randbetween(int lower, int upper) {
   return lower + rand() % (upper - lower + 1);
@@ -19,107 +35,64 @@ int max(int x, int y) {
   return (x > y ? x : y);
 }
 
+int popcount(int bits) {
+  int i;
+  int count = 0;
+  for (i = bits; i != 0; i &= i - 1) {
+    count++;
+  }
+  return count;
+}
+
+bool legal_number(int number) {
+  bool digit[10];
+  int i, mod;
+  for (i = 0; i < 10; i++) {
+    digit[i] = false;
+  }
+  while (number > 0) {
+    mod = number % 10;
+    if (digit[mod]) {
+      return false;
+    }
+    digit[mod] = true;
+    number /= 10;
+  }
+  return true;
+}
+
+// count Hits & Blows
 Hint get_hint(int guess, int answer) {
   Hint hint = {0, 0};
-  int countg[10] = {0}, counta[10] = {0};
-  int i = 0, g, a;
-  for (i = 0; i < 4; i++) {
-    g = guess % 10, a = answer % 10;
-    countg[g]++, counta[a]++;
-    if (g == a) {
+  int gbits = 0, abits = 0;
+  int i, g, a;
+  for (i = 0, g = guess, a = answer; i < 4; i++) {
+    if (g % 10 == a % 10) {
       hint.hit++;
     }
-    guess /= 10;
-    answer /= 10;
+    gbits |= 1 << (g % 10);
+    abits |= 1 << (a % 10);
+    g /= 10;
+    a /= 10;
   }
-  for (i = 0; i < 10; i++) {
-    hint.blow += min(counta[i], countg[i]);
-  }
-  hint.blow -= hint.hit;
+  hint.blow = popcount(gbits & abits) - hint.hit;
   return hint;
 }
 
-typedef struct candidate {
-  bool cand[10000];
-} Candidate;
-
-Candidate new_candidate() {
-  Candidate c;
-  int i;
-  for (i = 0; i < 10000; i++) {
-    c.cand[i] = true;
-  }
-  return c;
-}
-
-typedef struct classification {
-  int classes[5][5];
-} Classification;
-
-Classification new_classification() {
-  Classification c;
-  int i, j;
-  for (i = 0; i < 5; i++) {
-    for (j = 0; j < 5; j++) {
-      c.classes[i][j] = 0;
-    }
-  }
-  return c;
-}
-
-Classification classify(int guess, Candidate candidate) {
-  int i;
-  Hint hint;
-  Classification classes = new_classification();
-  for (i = 0; i < 10000; i++) {
-    if (candidate.cand[i]) {
-      hint = get_hint(guess, i);
-      classes.classes[hint.hit][hint.blow]++;
-    }
-  }
-  return classes;
-}
-
-int max_size(Classification classes) {
-  int i, j;
-  int size = -1;
-  for (i = 0; i < 5; i++) {
-    for (j = 0; j < 5; j++) {
-      size = max(size, classes.classes[i][j]);
-    }
-  }
-  return size;
-}
-
-void solve() {
-  Classification classes;
-  Candidate candidate = new_candidate();
-  int i;
-}
-
-void questionnaire() {
-  int kaisuu = 0;
+void give_question() {
   int answer, guess;
   Hint hint;
-  guess = -1;
-  answer = randbetween(0, 9999);
-  while (guess != answer) {
+
+  answer = rand() % 10000;
+  printf("ans=%d\n", answer);
+
+  do {
     scanf("%d", &guess);
     hint = get_hint(guess, answer);
-    printf("%d Hit, %dBlow\n", hint.hit, hint.blow);
-    kaisuu++;
-  }
-  printf("answer: %d\n", answer);
-  printf("kaisuu: %d\n", kaisuu);
-  if (kaisuu < 7) {
-    printf("tuyoi\n");
-  } else {
-    printf("yowai\n");
-  }
+    printf("%d Hit, %d Blow\n", hint.hit, hint.blow);
+  } while (guess != answer);
 }
 
-int main(int argc, char *argv[]) {
-  srand((unsigned)time(NULL));
-  questionnaire();
-  return 0;
+int main() {
+  give_question();
 }
