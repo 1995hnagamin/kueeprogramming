@@ -17,9 +17,13 @@ typedef struct candidates {
   int active;
 } Candidates;
 
-typedef struct oracle {
+typedef struct checker {
   Hint (*call)(int);
-} Oracle;
+} Checker;
+
+typedef struct guesser {
+  int (*call)();
+} Guesser;
 
 bool is_legal(int n) {
   bool num[10];
@@ -93,17 +97,30 @@ int make_answer() {
   return LEGALNUMS[idx];
 }
 
-void give_question() {
-  int answer, guess;
-  Hint hint;
+int Answer;
+Hint step_question(Guesser guesser) {
+  int guess = guesser.call();
+  Hint hint = get_hint(guess, Answer);
+  return hint;
+}
 
-  answer = make_answer();
+int get_guess_from_user() {
+  int guess;
+  printf("> ");
+  scanf("%d", &guess);
+  return guess;
+}
+
+void give_question() {
+  Hint hint;
+  Answer = make_answer();
+  Guesser user;
+  user.call = &get_guess_from_user;
 
   do {
-    scanf("%d", &guess);
-    hint = get_hint(guess, answer);
+    hint = step_question(user);
     printf("%d Hit, %d Blow\n", hint.hit, hint.blow);
-  } while (guess != answer);
+  } while (hint.hit != 4);
 }
 
 int select_candidate_randomly(Candidates *c) {
@@ -147,7 +164,7 @@ Hint get_feedback_from_user(int guess) {
 }
 
 Candidates Cands;
-bool step_guess(Oracle oracle) {
+bool step_guess(Checker oracle) {
   int guess = select_candidate_randomly(&Cands);
   Hint feedback = oracle.call(guess);
   if (feedback.hit == 4) {
@@ -161,7 +178,7 @@ bool step_guess(Oracle oracle) {
 void guess_answer() {
   Cands = new_candidates();
   bool finished = false;
-  Oracle user;
+  Checker user;
   user.call = &get_feedback_from_user;
   while (!finished) {
     finished = step_guess(user);
@@ -171,5 +188,5 @@ void guess_answer() {
 int main() {
   srand((unsigned)time(NULL));
   init();
-  guess_answer();
+  give_question();
 }
