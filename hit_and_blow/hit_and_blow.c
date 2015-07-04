@@ -2,37 +2,63 @@
 #include<stdlib.h>
 #include<time.h>
 #include<stdbool.h>
+#include<string.h>
+#define MAXN 10000
+#define NUMBERS 5040
 
-bool ISLEGAL[10000];
-int LEGALNUMS[5040];
+int LEGALNUMS[NUMBERS];
 
 typedef struct hint {
   int hit, blow;
 } Hint;
 
 typedef struct candidates {
-  bool cand[10000];
+  bool cand[NUMBERS];
+  int active;
 } Candidates;
+
+typedef struct oracle {
+  Hint (*call)(int);
+} Oracle;
+
+bool is_legal(int n) {
+  bool num[10];
+  memset(num, false, 10);
+  int i, mod;
+  for (i = 0; i < 4; ++i) {
+    mod = n % 10;
+    if (num[mod]) {
+      return false;
+    }
+    num[mod] = true;
+    n /= 10;
+  }
+  return true;
+}
+
+void init() {
+  int n;
+  int idx = 0;
+  for (n = 0; n < 10000; ++n) {
+    if (is_legal(n)) {
+      LEGALNUMS[idx] = n;
+      ++idx;
+    }
+  }
+}
 
 Candidates new_candidates() {
   Candidates c;
   int i;
-  for (i = 0; i < 10000; i++) {
+  for (i = 0; i < NUMBERS; i++) {
     c.cand[i] = true;
   }
+  c.active = NUMBERS;
   return c;
 }
 
 int randbetween(int lower, int upper) {
-  return lower + rand() % (upper - lower + 1);
-}
-
-int min(int x, int y) {
-  return (x < y ? x : y);
-}
-
-int max(int x, int y) {
-  return (x > y ? x : y);
+  return (rand() % (upper - lower + 1)) + lower;
 }
 
 int popcount(int bits) {
@@ -42,23 +68,6 @@ int popcount(int bits) {
     count++;
   }
   return count;
-}
-
-bool legal_number(int number) {
-  bool digit[10];
-  int i, mod;
-  for (i = 0; i < 10; i++) {
-    digit[i] = false;
-  }
-  while (number > 0) {
-    mod = number % 10;
-    if (digit[mod]) {
-      return false;
-    }
-    digit[mod] = true;
-    number /= 10;
-  }
-  return true;
 }
 
 // count Hits & Blows
@@ -79,12 +88,16 @@ Hint get_hint(int guess, int answer) {
   return hint;
 }
 
+int make_answer() {
+  int idx = randbetween(0, NUMBERS);
+  return LEGALNUMS[idx];
+}
+
 void give_question() {
   int answer, guess;
   Hint hint;
 
-  answer = rand() % 10000;
-  printf("ans=%d\n", answer);
+  answer = make_answer();
 
   do {
     scanf("%d", &guess);
@@ -93,6 +106,73 @@ void give_question() {
   } while (guess != answer);
 }
 
+int select_candidate_randomly(Candidates *c) {
+  int idx = randbetween(0, c->active);
+  int i = 0, count = 0;
+  while (count < idx) {
+    i++;
+    while (!(c->cand[i])) { i++; }
+    count++;
+  }
+  return LEGALNUMS[i];
+}
+
+bool eq_hint(Hint a, Hint b) {
+  return (a.hit == b.hit) && (a.blow == b.blow);
+}
+
+void squeeze_candidates(Candidates *c, int guess, Hint feedback) {
+  int i;
+  for (i = 0; i < NUMBERS; ++i) {
+    Hint h; 
+    if (!(c->cand[i])) {
+      continue;
+    }
+    h = get_hint(guess, LEGALNUMS[i]);
+    if (!eq_hint(h, feedback)) {
+      c->cand[i] = false;
+      c->active--;
+    }
+  }
+}
+
+Hint get_feedback_from_user() {
+  Hint hint;
+  printf("Hit > ");
+  scanf("%d", &hint.hit);
+  printf("Blow > ");
+  scanf("%d", &hint.blow);
+  return hint;
+}
+
+Candidates Cands;
+bool step_guess(Oracle oracle) {
+  int guess = select_candidate_randomly(&Cands);
+  Hint feedback = oracle.call(guess);
+  if (feedback.hit == 4) {
+    return true;
+  } else {
+    squeeze_candidates(&Cands, guess, feedback);
+    return false;
+  }
+}
+
+void guess_answer() {
+  Candidates cands = new_candidates();
+  while (true) {
+    int guess = select_candidate_randomly(&cands);
+    Hint feedback;
+    printf("%04d\n", guess);
+    feedback = get_feedback_from_user();
+    if (feedback.hit == 4) {
+      break;
+    }
+    squeeze_candidates(&cands, guess, feedback);
+  }
+}
+
 int main() {
-  give_question();
+  srand((unsigned)time(NULL));
+  init();
+  guess_answer();
 }
