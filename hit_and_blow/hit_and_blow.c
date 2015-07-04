@@ -136,8 +136,9 @@ void squeeze_candidates(Candidates *c, int guess, Hint feedback) {
   }
 }
 
-Hint get_feedback_from_user() {
+Hint get_feedback_from_user(int guess) {
   Hint hint;
+  printf("%04d\n", guess);
   printf("Hit > ");
   scanf("%d", &hint.hit);
   printf("Blow > ");
@@ -158,16 +159,12 @@ bool step_guess(Oracle oracle) {
 }
 
 void guess_answer() {
-  Candidates cands = new_candidates();
-  while (true) {
-    int guess = select_candidate_randomly(&cands);
-    Hint feedback;
-    printf("%04d\n", guess);
-    feedback = get_feedback_from_user();
-    if (feedback.hit == 4) {
-      break;
-    }
-    squeeze_candidates(&cands, guess, feedback);
+  Cands = new_candidates();
+  bool finished = false;
+  Oracle user;
+  user.call = &get_feedback_from_user;
+  while (!finished) {
+    finished = step_guess(user);
   }
 }
 
