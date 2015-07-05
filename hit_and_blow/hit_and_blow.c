@@ -110,6 +110,9 @@ bool eq_hint(Hint a, Hint b) {
   return (a.hit == b.hit) && (a.blow == b.blow);
 }
 
+/* ゲームを1ステップ実行する
+ * guesserに解を予想させ、oracleに解チェックさせる
+ */
 bool step_game(Guesser guesser, Oracle oracle) {
   int guess = guesser.call();
   Hint feedback = oracle.call(guess);
@@ -117,6 +120,9 @@ bool step_game(Guesser guesser, Oracle oracle) {
   return (feedback.hit == 4);
 }
 
+/* ゲームを開始する
+ * 4 Hit, 0 Blow になるまでstep_gameを繰り返す
+ */
 void start_game(Guesser guesser, Oracle oracle) {
   bool finished = false;
   while (!finished) {
@@ -125,6 +131,9 @@ void start_game(Guesser guesser, Oracle oracle) {
   return;
 }
 
+/* 解の予想戦略
+ * *c中の有効な解の候補の中から無作為に一つ選んで返す
+ */
 int select_candidate_randomly(Candidates *c) {
   int idx = randbetween(0, c->active);
   int i = 0, count = 0;
@@ -136,6 +145,8 @@ int select_candidate_randomly(Candidates *c) {
   return LEGALNUMS[i];
 }
 
+/* *cの中で解の候補となり得ない数を消す
+ */
 void squeeze_candidates(Candidates *c, int guess, Hint feedback) {
   int i;
   for (i = 0; i < NUMBERS; ++i) {
@@ -188,7 +199,7 @@ void guess_answer() {
 /* 出題モード */
 
 int Answer;
-Hint step_question(int guess) {
+Hint check_answer(int guess) {
   Hint hint = count_hit_blow(guess, Answer);
   return hint;
 }
@@ -213,7 +224,7 @@ void show_hint_and_squeeze_Cands(int guess, Hint hint) {
 
 void give_question() {
   Guesser user = { &get_guess_from_user, &show_hint };
-  Oracle oracle = { &step_question };
+  Oracle oracle = { &check_answer };
   Answer = make_answer();  
   start_game(user, oracle);
 }
@@ -222,7 +233,7 @@ void give_question() {
 
 void auto_fight() {
   Guesser random = { &select_from_Cands, &show_hint_and_squeeze_Cands };
-  Oracle oracle = { &step_question };
+  Oracle oracle = { &check_answer };
   Cands = new_candidates();
   Answer = make_answer();
 
