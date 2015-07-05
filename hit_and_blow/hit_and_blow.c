@@ -51,7 +51,7 @@ int popcount(int bits) {
 
 /* nが解としてふさわしいか(0〜9を1回ずつ使っている4桁の数か)を判定する */
 bool is_legal(int n) {
-  int bits = 0;
+  int bits = 0; // 使っている数の集合のビット表現
   int i;
   if (n < 0 || 9999 < n) {
     return false;
@@ -85,6 +85,7 @@ Candidates new_candidates() {
   return c;
 }
 
+/* lower以上upper未満の乱数を返す */
 int randbetween(int lower, int upper) {
   return (rand() % (upper - lower + 1)) + lower;
 }
@@ -216,12 +217,6 @@ void show_hint(int guess, Hint hint) {
   return;
 }
 
-void show_hint_and_squeeze_Cands(int guess, Hint hint) {
-  printf("%04d (%d Hit, %d Blow)\n", guess, hint.hit, hint.blow);
-  squeeze_Cands(guess, hint);
-  return;
-}
-
 void give_question() {
   Guesser user = { &get_guess_from_user, &show_hint };
   Oracle oracle = { &check_answer };
@@ -230,6 +225,12 @@ void give_question() {
 }
 
 /* 自動対戦モード */
+
+void show_hint_and_squeeze_Cands(int guess, Hint hint) {
+  printf("%04d (%d Hit, %d Blow)\n", guess, hint.hit, hint.blow);
+  squeeze_Cands(guess, hint);
+  return;
+}
 
 void auto_fight() {
   Guesser random = { &select_from_Cands, &show_hint_and_squeeze_Cands };
@@ -255,4 +256,5 @@ int main(int argc, char *argv[]) {
     printf("%s 2 : 解答モード\n", argv[0]);
     printf("%s 3 : 自動対戦モード\n", argv[0]);
   }
+  return 0;
 }
