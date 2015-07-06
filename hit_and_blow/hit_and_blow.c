@@ -50,6 +50,31 @@ int popcount(int bits) {
   return count;
 }
 
+int max(int x, int y) {
+  return (x > y ? x : y);
+}
+
+int min(int x, int y) {
+  return (x < y ? x : y);
+}
+
+int maximum(int arr[], int size) {
+  int m = arr[0];
+  int i;
+  for (i = 0; i < size; ++i) {
+    m = max(m, arr[i]);
+  }
+  return m;
+}
+
+void init_array(int arr[], int size) {
+  int i;
+  for (i = 0; i < size; ++i) {
+    arr[i] = 0;
+  }
+  return;
+}
+
 /* nが解としてふさわしいか(0〜9を1回ずつ使っている4桁の数か)を判定する */
 bool is_legal(int n) {
   int bits = 0; // 使っている数の集合のビット表現
@@ -93,7 +118,7 @@ int randbetween(int lower, int upper) {
 
 Hint count_hit_blow(int guess, int answer) {
   Hint hint = {0, 0};
-  int gbits = 0, abits = 0;
+  int gbits = 0, abits = 0; // guess, answerで使われる数の集合
   int i, g, a;
   for (i = 0, g = guess, a = answer; i < 4; i++) {
     if (g % 10 == a % 10) {
@@ -113,7 +138,7 @@ bool eq_hint(Hint a, Hint b) {
 }
 
 /* ゲームを1ステップ実行する
- * guesserに解を予想させ、oracleに解チェックさせる
+ * guesserに解を予想させ、oracleにチェックさせる
  */
 bool step_game(Guesser guesser, Oracle oracle) {
   int guess = guesser.call();
@@ -151,42 +176,44 @@ int select_candidate_randomly(Candidates *c) {
   return hoge[target];
 }
 
-int maximum(int arr[], int size) {
-  int max = arr[0];
-  int i;
-  for (i = 0; i < size; ++i) {
-    max = (max < arr[i] ? arr[i] : max);
-  }
-  return max;
-}
-
+/* 解の候補cをanswerで割ったときの幅を返す
+ * 
+ * 解の候補がcの状態でanswerと解答するとき
+ * 得られるヒントによって解の絞られ方が変わるが、
+ * その中で最も絞れなかった場合の候補数を
+ * cをanswerで割ったときの幅と呼ぶことにする
+ */
 int count_width(Candidates *c, int answer) {
   int hints[30];
   int i;
-  for (i = 0; i < 30; ++i) { hints[i] = 0; }
+  init_array(hints, 30);
   for (i = 0; i < NUMBERS; ++i) {
     if (!c->cand[i]) { continue; }
     Hint h = count_hit_blow(LEGALNUMS[i], answer);
     hints[h.hit * 5 + h.blow]++;
   }
-  int max = 0;
-  for (i = 0; i < 30; ++i) {
-    if (max < hints[i]) max = hints[i];
-    //printf("$%d,",hints[i]);
-  }
-  //putchar('\n');
-  return max;
+  return maximum(hints, 30);
 }
 
+/* 解の予想戦略
+ * できるだけ候補cの幅を小さくするような解答を返す
+ */
 int minimize_width(Candidates *c) {
   int i = 0, idx = 0;
   int min_width = INF;
-  int cands[NUMBERS / 2];
+  int cands[NUMBERS / 2]; // 目的の解答を保存する配列
+  
+  /* 解の候補数が大きいときは無作為に選ぶようにすると成績が良くなった
+   * 解の候補数が1のとき以下はうまく動かないので特別に処理する
+   */
   if (c->active > 200 || c->active == 1) {
     return select_candidate_randomly(c);
   }
+  
+  /* 幅を最小にする解を探してcandsに保存する
+   */
   for (i = 0; i < NUMBERS; ++i) {
-    if (!c->cand[i])continue;
+    if (!c->cand[i]) continue; // ありえない解は無視すると成績が良くなった
     int n = LEGALNUMS[i];
     int width;
     width = count_width(c, n);
@@ -198,11 +225,10 @@ int minimize_width(Candidates *c) {
       cands[idx++] = n;
     }
   }
-  ////printf("idx: %d\n", idx);
   return cands[randbetween(0,idx)];
 }
 
-/* *cの中で解の候補となり得ない数を消す
+/* cの中で解の候補となり得ない数を消す
  */
 void squeeze_candidates(Candidates *c, int guess, Hint feedback) {
   int i;
@@ -215,11 +241,6 @@ void squeeze_candidates(Candidates *c, int guess, Hint feedback) {
       c->active--;
     }
   }
-}
-
-int make_answer() {
-  int idx = randbetween(0, NUMBERS);
-  return LEGALNUMS[idx];
 }
 
 /* 解答モード */
@@ -253,6 +274,11 @@ int guess_answer() {
 }
 
 /* 出題モード */
+
+int make_answer() {
+  int idx = randbetween(0, NUMBERS);
+  return LEGALNUMS[idx];
+}
 
 int Answer;
 Hint check_answer(int guess) {
@@ -289,6 +315,9 @@ void show_hint_and_squeeze_Cands(int guess, Hint hint) {
   return;
 }
 
+/* answerは解の指定に使う ゼロなら新規作成し非ゼロならそれを使う
+ * show_stepがtrueのときはゲームの進行状況を表示する
+ */
 int auto_fight(int answer, bool show_step) {
   Guesser random = { 
      &minimize_width_of_Cands,
@@ -301,12 +330,20 @@ int auto_fight(int answer, bool show_step) {
   return count;
 }
 
+/* 5040回自動対戦モード */
+
 void auto_fight_5040_times() {
   int i;
-  int result[101];
+  
+  /* 成績を保存する配列
+   * 得点がiだったゲームはresult[i]個ある
+   * 得点が99より大きいゲームはresult[0]個ある
+   */
+  int result[101]; 
+  
   int max_count = -1, sum_count = 0;
   double average;
-  for (i = 0; i < 101; ++i) { result[i] = 0; }
+  init_array(result, 101);
   for (i = 0; i < NUMBERS; ++i) {
     int count;
     count = auto_fight(LEGALNUMS[i], false);
@@ -315,11 +352,10 @@ void auto_fight_5040_times() {
     } else {
       result[count]++;
     }
-    max_count = (count > max_count ? count : max_count);
+    max_count = max(max_count, count);
     sum_count += count;
   }
-  if (max_count > 99) max_count = 99;
-  for (i = 1; i <= max_count; ++i) {
+  for (i = 1; i <= min(max_count, 99); ++i) {
     printf("%2d: %4d\n", i, result[i]);
   }
   if (result[0] > 0) {
