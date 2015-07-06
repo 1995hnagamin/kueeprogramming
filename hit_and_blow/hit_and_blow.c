@@ -181,7 +181,7 @@ int count_width(Candidates *c, int answer) {
 int minimize_width(Candidates *c) {
   int i = 0, idx = 0;
   int min_width = INF;
-  int cands[NUMBERS];
+  int cands[NUMBERS / 2];
   if (c->active > 200 || c->active == 1) {
     return select_candidate_randomly(c);
   }
@@ -227,24 +227,16 @@ int make_answer() {
 Hint get_feedback_from_user(int guess) {
   Hint hint;
   printf("%04d\n", guess);
-  printf("Hit数 > ");
+  printf("Hit > ");
   scanf("%d", &hint.hit);
-  printf("Blow数 > ");
+  printf("Blow > ");
   scanf("%d", &hint.blow);
   return hint;
 }
 
 Candidates Cands;
-int select_from_Cands() {
-  return select_candidate_randomly(&Cands);
-}
-
 int minimize_width_of_Cands() {
-  if (Cands.active == NUMBERS) {
-    return select_candidate_randomly(&Cands);
-  } else {
-    return minimize_width(&Cands);
-  }
+  return minimize_width(&Cands);
 }
 
 void squeeze_Cands(int guess, Hint hint) {
@@ -252,11 +244,10 @@ void squeeze_Cands(int guess, Hint hint) {
 }
 
 int guess_answer() {
-  Guesser random = { &select_from_Cands, &squeeze_Cands };
+  Guesser random = { &minimize_width_of_Cands, &squeeze_Cands };
   Oracle user = { &get_feedback_from_user };
   Cands = new_candidates();
   int count;
-  printf("各桁に重複のない4桁の数を決めてください。\n");
   count = start_game(random, user);
   return count;
 }
@@ -293,38 +284,24 @@ int give_question() {
 /* 自動対戦モード */
 
 void show_hint_and_squeeze_Cands(int guess, Hint hint) {
-  printf("%04d (%d Hit, %d Blow ", guess, hint.hit, hint.blow);
+  show_hint(guess, hint);
   squeeze_Cands(guess, hint);
-  printf("解の候補: %4d個)\n", Cands.active);
   return;
 }
 
-int auto_fight(bool optimized) {
+int auto_fight(int answer, bool show_step) {
   Guesser random = { 
-    (optimized ? &minimize_width_of_Cands : &select_from_Cands),
-     &show_hint_and_squeeze_Cands };
+     &minimize_width_of_Cands,
+     (show_step ? &show_hint_and_squeeze_Cands : &squeeze_Cands) };
   Oracle oracle = { &check_answer };
   Cands = new_candidates();
   int count;
-  Answer = make_answer();
+  Answer = (answer == 0 ? make_answer() : answer);
   count = start_game(random, oracle);
   return count;
 }
 
-int auto_fight_without_print(int answer, bool optimized) {
-  Guesser random = { 
-    (optimized ? &minimize_width_of_Cands : &select_from_Cands),
-     &squeeze_Cands };
-  Oracle oracle = { &check_answer };
-  Cands = new_candidates();
-  int count;
-  Answer = answer;
-  count = start_game(random, oracle);
-//  printf("count:%d\n", count);
-  return count;
-}
-
-void auto_fight_5040_times(bool optimized) {
+void auto_fight_5040_times() {
   int i;
   int result[101];
   int max_count = -1, sum_count = 0;
@@ -332,10 +309,7 @@ void auto_fight_5040_times(bool optimized) {
   for (i = 0; i < 101; ++i) { result[i] = 0; }
   for (i = 0; i < NUMBERS; ++i) {
     int count;
-/*    if (optimized && i % 250 == 0 && i > 0) {
-      printf("%4d games have been processed...\n", i);
-    }*/
-    count = auto_fight_without_print(LEGALNUMS[i], optimized);
+    count = auto_fight(LEGALNUMS[i], false);
     if (count > 99) {
       result[0]++;
     } else {
@@ -346,13 +320,13 @@ void auto_fight_5040_times(bool optimized) {
   }
   if (max_count > 99) max_count = 99;
   for (i = 1; i <= max_count; ++i) {
-    printf("%2d: %4d times\n", i, result[i]);
+    printf("%2d: %4d\n", i, result[i]);
   }
   if (result[0] > 0) {
-    printf("99<: %3d times\n", result[0]);
+    printf("99<: %3d\n", result[0]);
   }
   average = ((double)sum_count) / 5040.0;
-  printf("average: %lf\n", average);
+  printf("平均: %lf\n", average);
   return;
 }
 
@@ -364,18 +338,15 @@ int main(int argc, char *argv[]) {
   } else if (argc > 1 && strcmp(argv[1], "2") == 0) {
     guess_answer();
   } else if (argc > 1 && strcmp(argv[1], "3") == 0) {
-    auto_fight(false);
-  } else if (argc > 1 && strcmp(argv[1], "3O") == 0) {
-    auto_fight(true);
+    auto_fight(0,true);
   } else if (argc > 1 && strcmp(argv[1], "4") == 0) {
-    auto_fight_5040_times(false);
-  } else if (argc > 1 && strcmp(argv[1], "4O") == 0) {
-    auto_fight_5040_times(true);
+    auto_fight_5040_times();
   } else {
     printf("使い方:\n");
     printf("%s 1 : 出題モード\n", argv[0]);
     printf("%s 2 : 解答モード\n", argv[0]);
     printf("%s 3 : 自動対戦モード\n", argv[0]);
+    printf("%s 4 : 5040回自動対戦モード\n", argv[0]);
   }
   return 0;
 }
