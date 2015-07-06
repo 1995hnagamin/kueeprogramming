@@ -182,13 +182,11 @@ int minimize_width(Candidates *c) {
   int i = 0, idx = 0;
   int min_width = INF;
   int cands[NUMBERS];
-  if (c->active == NUMBERS || c->active == 1) {
+  if (c->active > 200 || c->active == 1) {
     return select_candidate_randomly(c);
   }
   for (i = 0; i < NUMBERS; ++i) {
-    if (c->active > 500 && !c->cand[i]) {
-      continue;
-    }
+    if (!c->cand[i])continue;
     int n = LEGALNUMS[i];
     int width;
     width = count_width(c, n);
@@ -322,6 +320,7 @@ int auto_fight_without_print(int answer, bool optimized) {
   int count;
   Answer = answer;
   count = start_game(random, oracle);
+//  printf("count:%d\n", count);
   return count;
 }
 
@@ -333,9 +332,9 @@ void auto_fight_5040_times(bool optimized) {
   for (i = 0; i < 101; ++i) { result[i] = 0; }
   for (i = 0; i < NUMBERS; ++i) {
     int count;
-    if (optimized && i % 250 == 0 && i > 0) {
+/*    if (optimized && i % 250 == 0 && i > 0) {
       printf("%4d games have been processed...\n", i);
-    }
+    }*/
     count = auto_fight_without_print(LEGALNUMS[i], optimized);
     if (count > 99) {
       result[0]++;
